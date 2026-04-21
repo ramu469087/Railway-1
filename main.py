@@ -33,7 +33,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Global storage
 active_tasks = {}
 task_logs = {}
-task_status = {}
 task_start_time = {}
 active_sessions = {}
 task_threads = {}
@@ -44,8 +43,8 @@ def show_logo():
     ascii_banner = pyfiglet.figlet_format("LORD DEVIL", font="slant")
     console.print(f"[bold red]{ascii_banner}[/bold red]")
     console.print("[bold cyan]🔥 INSTA TOOLS BY LORD DEVIL 🔥[/bold cyan]")
-    console.print("[yellow]⚡ Messenger Tool - 100% Working[/yellow]")
-    console.print("[green]🔐 Login Method: Cookies Only[/green]\n")
+    console.print("[yellow]⚡ Messenger & Group Name Changer - 100% Working[/yellow]")
+    console.print("[green]🔐 Login Methods: Cookies Only[/green]\n")
 
 # ----------- INSTAGRAPI LOGIN -----------
 def instagram_login_with_cookies(cookies_str):
@@ -202,9 +201,9 @@ def send_inbox_message(cl, target_username, hater_name, messages, delay, task_id
         index = 0
         total = len(messages)
         
-        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+        while task_id in active_tasks and active_tasks[task_id].get('running', True):
             # Check if task should stop
-            if not active_tasks[task_id].get('active', False):
+            if not active_tasks[task_id].get('running', True):
                 add_log(task_id, "🛑 Task stopped by user", 'info')
                 break
                 
@@ -222,19 +221,29 @@ def send_inbox_message(cl, target_username, hater_name, messages, delay, task_id
                 add_log(task_id, log_msg, 'success')
                 
                 index = (index + 1) % total
-                time.sleep(delay)
+                
+                # Delay with stop checking
+                for _ in range(delay):
+                    if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                        break
+                    time.sleep(1)
                 
             except Exception as e:
                 err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {str(e)[:100]}"
                 add_log(task_id, err_msg, 'error')
-                time.sleep(5)
+                
+                # Delay with stop checking
+                for _ in range(5):
+                    if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                        break
+                    time.sleep(1)
                 
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal error: {str(e)}"
         add_log(task_id, err_msg, 'error')
     finally:
-        if task_id in active_tasks:
-            active_tasks[task_id]['active'] = False
+        add_log(task_id, "🛑 Task stopped completely", 'info')
+        console.print(f"[red]Task {task_id} stopped completely[/red]")
 
 def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
     """Send messages to group"""
@@ -242,9 +251,9 @@ def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
         index = 0
         total = len(messages)
         
-        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+        while task_id in active_tasks and active_tasks[task_id].get('running', True):
             # Check if task should stop
-            if not active_tasks[task_id].get('active', False):
+            if not active_tasks[task_id].get('running', True):
                 add_log(task_id, "🛑 Task stopped by user", 'info')
                 break
                 
@@ -262,19 +271,29 @@ def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
                 add_log(task_id, log_msg, 'success')
                 
                 index = (index + 1) % total
-                time.sleep(delay)
+                
+                # Delay with stop checking
+                for _ in range(delay):
+                    if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                        break
+                    time.sleep(1)
                 
             except Exception as e:
                 err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {str(e)[:100]}"
                 add_log(task_id, err_msg, 'error')
-                time.sleep(5)
+                
+                # Delay with stop checking
+                for _ in range(5):
+                    if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                        break
+                    time.sleep(1)
                 
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal error: {str(e)}"
         add_log(task_id, err_msg, 'error')
     finally:
-        if task_id in active_tasks:
-            active_tasks[task_id]['active'] = False
+        add_log(task_id, "🛑 Task stopped completely", 'info')
+        console.print(f"[red]Task {task_id} stopped completely[/red]")
 
 def change_group_name_fast(session, thread_id, names, delay, task_id):
     """Ultra fast group name changer"""
@@ -282,9 +301,9 @@ def change_group_name_fast(session, thread_id, names, delay, task_id):
         index = 0
         total = len(names)
         
-        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+        while task_id in active_tasks and active_tasks[task_id].get('running', True):
             # Check if task should stop
-            if not active_tasks[task_id].get('active', False):
+            if not active_tasks[task_id].get('running', True):
                 add_log(task_id, "🛑 Task stopped by user", 'info')
                 break
                 
@@ -310,19 +329,29 @@ def change_group_name_fast(session, thread_id, names, delay, task_id):
                         add_log(task_id, err_msg, 'error')
                     
                     index = (index + 1) % total
-                    time.sleep(delay)
+                    
+                    # Delay with stop checking
+                    for _ in range(delay):
+                        if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                            break
+                        time.sleep(1)
                     
             except Exception as e:
                 err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fast error: {str(e)[:100]}"
                 add_log(task_id, err_msg, 'error')
-                time.sleep(5)
+                
+                # Delay with stop checking
+                for _ in range(5):
+                    if task_id not in active_tasks or not active_tasks[task_id].get('running', True):
+                        break
+                    time.sleep(1)
                 
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal fast error: {str(e)}"
         add_log(task_id, err_msg, 'error')
     finally:
-        if task_id in active_tasks:
-            active_tasks[task_id]['active'] = False
+        add_log(task_id, "🛑 Task stopped completely", 'info')
+        console.print(f"[red]Task {task_id} stopped completely[/red]")
 
 # ----------- COMMON FUNCTIONS -----------
 def add_log(task_id, message, log_type='info'):
@@ -446,7 +475,7 @@ def process_messenger_instagrapi(cl, request, task_id):
             })
         
         # Initialize task
-        active_tasks[task_id] = {'active': True, 'sent_count': 0}
+        active_tasks[task_id] = {'running': True, 'sent_count': 0}
         task_logs[task_id] = []
         task_start_time[task_id] = datetime.now()
         
@@ -473,7 +502,7 @@ def process_messenger_instagrapi(cl, request, task_id):
                 'success': f'✅ Messenger started for @{target_username}',
                 'tool_type': 'messenger',
                 'hater_name': hater_name,
-                'data': messages[:10],  # Show first 10 messages
+                'data': messages[:10],
                 'delay': delay,
                 'task_id': task_id,
                 'target': target_username
@@ -540,7 +569,7 @@ def process_namechanger_fast(session, request, task_id):
             })
         
         # Initialize task
-        active_tasks[task_id] = {'active': True, 'changed_count': 0}
+        active_tasks[task_id] = {'running': True, 'changed_count': 0}
         task_logs[task_id] = []
         task_start_time[task_id] = datetime.now()
         
@@ -576,31 +605,31 @@ def process_namechanger_fast(session, request, task_id):
 
 @app.route('/stop_task', methods=['POST'])
 def stop_task():
+    """Stop task and completely remove it"""
     data = request.get_json()
     task_id = data.get('task_id')
     
     if task_id in active_tasks:
-        # Set active flag to False to stop the loop
-        active_tasks[task_id]['active'] = False
+        # Send stop signal
+        active_tasks[task_id]['running'] = False
+        add_log(task_id, "🛑 Stop signal sent - Task stopping...", 'info')
         
-        # Wait for thread to finish (max 2 seconds)
+        # Wait for thread to finish (max 3 seconds)
         if task_id in task_threads:
-            task_threads[task_id].join(timeout=2)
+            task_threads[task_id].join(timeout=3)
         
-        add_log(task_id, "🛑 Task stopped by user", 'info')
+        # COMPLETELY REMOVE TASK - No trace left
+        if task_id in active_tasks:
+            del active_tasks[task_id]
+        if task_id in task_logs:
+            del task_logs[task_id]
+        if task_id in task_start_time:
+            del task_start_time[task_id]
+        if task_id in task_threads:
+            del task_threads[task_id]
         
-        # Clean up after 5 seconds
-        def cleanup():
-            time.sleep(5)
-            if task_id in active_tasks:
-                del active_tasks[task_id]
-            if task_id in task_threads:
-                del task_threads[task_id]
-        
-        cleanup_thread = threading.Thread(target=cleanup, daemon=True)
-        cleanup_thread.start()
-        
-        return jsonify({'success': True, 'message': 'Task stopped successfully'})
+        console.print(f"[red]✅ Task {task_id} stopped and removed completely[/red]")
+        return jsonify({'success': True, 'message': 'Task stopped and removed completely'})
     else:
         return jsonify({'error': 'Task ID not found'})
 
@@ -610,14 +639,14 @@ def get_logs():
     if task_id in task_logs:
         return jsonify({'logs': task_logs[task_id]})
     else:
-        return jsonify({'logs': []})
+        return jsonify({'logs': [], 'message': 'Task not found or already removed'})
 
 @app.route('/task_status')
 def task_status_route():
     task_id = request.args.get('task_id')
     if task_id in active_tasks:
-        status = active_tasks[task_id]
-        status['running'] = status.get('active', False)
+        status = active_tasks[task_id].copy()
+        status['running'] = status.get('running', False)
         status['uptime'] = get_uptime(task_id)
         if 'sent_count' in status:
             status['total_sent'] = status['sent_count']
@@ -625,17 +654,18 @@ def task_status_route():
             status['total_changed'] = status['changed_count']
         return jsonify(status)
     else:
-        return jsonify({'running': False, 'message': 'Task not found or stopped'})
+        return jsonify({'running': False, 'message': 'Task not found or already stopped/removed'})
 
 @app.route('/status')
 def status():
     return jsonify({
-        'active_tasks': len([t for t in active_tasks if active_tasks[t].get('active', False)]),
-        'version': '2.0',
+        'active_tasks': len([t for t in active_tasks if active_tasks[t].get('running', False)]),
+        'total_tasks_ever': 'Use task_status for specific task',
+        'version': '3.0',
         'author': 'LORD DEVIL'
     })
 
-# HTML Template
+# HTML Template (Complete Original)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -727,16 +757,6 @@ HTML_TEMPLATE = """
             border-color: #00ffff;
             box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
         .btn {
             padding: 15px 30px;
             border: none;
@@ -799,6 +819,7 @@ HTML_TEMPLATE = """
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         .tab-btn {
             padding: 10px 20px;
@@ -842,7 +863,6 @@ HTML_TEMPLATE = """
         }
         @media (max-width: 768px) {
             .mode-btn { min-width: 100%; }
-            .radio-group { flex-direction: column; }
             .owner-name { font-size: 1.8rem; }
         }
     </style>
@@ -963,7 +983,8 @@ HTML_TEMPLATE = """
                     <label for="stop_task_id">Enter Task ID:</label>
                     <input type="text" id="stop_task_id" placeholder="Enter task ID to stop">
                 </div>
-                <button class="btn" onclick="stopTask()" style="background: linear-gradient(45deg, #f44336, #d32f2f);">Stop Task</button>
+                <button class="btn" onclick="stopTask()" style="background: linear-gradient(45deg, #f44336, #d32f2f);">Stop & Remove Task</button>
+                <small style="display: block; margin-top: 10px; color: #ff9999;">⚠️ Task will be completely removed after stopping</small>
             </div>
         </div>
         
@@ -993,6 +1014,10 @@ HTML_TEMPLATE = """
                         <div class="status-item">
                             <span class="status-label">Total Sent/Changed:</span>
                             <span class="status-value" id="status_count"></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Activity:</span>
+                            <span class="status-value" id="status_last"></span>
                         </div>
                     </div>
                 </div>
@@ -1049,37 +1074,29 @@ HTML_TEMPLATE = """
         let logsInterval = null;
         
         function switchMode(mode) {
-            // Update buttons
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Show form
             document.querySelectorAll('.form-section').forEach(section => {
                 section.classList.remove('active');
             });
             document.getElementById(mode + '-form').classList.add('active');
-            
-            // Switch to start tab
             switchTab('start');
         }
         
         function switchTab(tab) {
-            // Update tab buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Hide all forms
             document.querySelectorAll('.form-section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Show selected tab
             if (tab === 'start') {
-                // Show current mode form
                 const activeMode = document.querySelector('.mode-btn.active').classList[1];
                 if (activeMode.includes('messenger')) {
                     document.getElementById('messenger-form').classList.add('active');
@@ -1104,20 +1121,27 @@ HTML_TEMPLATE = """
                 return;
             }
             
-            fetch('/stop_task', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({task_id: taskId})
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Task stopped successfully!');
-                    document.getElementById('stop_task_id').value = '';
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            });
+            if (confirm('⚠️ Are you sure? Task will be completely removed and cannot be accessed after stopping!')) {
+                fetch('/stop_task', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({task_id: taskId})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Task stopped and removed completely!');
+                        document.getElementById('stop_task_id').value = '';
+                        // Clear logs if monitoring this task
+                        if (currentTaskId === taskId) {
+                            if (logsInterval) clearInterval(logsInterval);
+                            document.getElementById('logsContainer').innerHTML = '<div class="log-entry">Task removed. Start new task.</div>';
+                        }
+                    } else {
+                        alert('❌ Error: ' + data.error);
+                    }
+                });
+            }
         }
         
         function checkTaskStatus() {
@@ -1142,14 +1166,22 @@ HTML_TEMPLATE = """
                         } else {
                             document.getElementById('status_count').textContent = '0';
                         }
+                        if (data.last_message) {
+                            document.getElementById('status_last').textContent = data.last_message;
+                        } else if (data.last_name) {
+                            document.getElementById('status_last').textContent = data.last_name;
+                        } else {
+                            document.getElementById('status_last').textContent = 'No activity yet';
+                        }
                         display.style.display = 'block';
                     } else {
                         display.style.display = 'block';
                         document.getElementById('status_id').textContent = taskId;
-                        document.getElementById('status_running').innerHTML = '● STOPPED';
+                        document.getElementById('status_running').innerHTML = '❌ STOPPED / REMOVED';
                         document.getElementById('status_running').style.color = '#f44336';
                         document.getElementById('status_uptime').textContent = 'N/A';
                         document.getElementById('status_count').textContent = '0';
+                        document.getElementById('status_last').textContent = 'Task not found or removed';
                     }
                 })
                 .catch(err => {
@@ -1193,18 +1225,17 @@ HTML_TEMPLATE = """
                             container.appendChild(div);
                         });
                         container.scrollTop = container.scrollHeight;
+                    } else if (data.message) {
+                        container.innerHTML = '<div class="log-entry">' + data.message + '</div>';
                     } else {
-                        container.innerHTML = '<div class="log-entry">No logs yet. Task may not be running.</div>';
+                        container.innerHTML = '<div class="log-entry">No logs. Task may be stopped or removed.</div>';
                     }
                 });
         }
         
-        // Initialize
         window.onload = function() {
             toggleMessageType();
-            
             {% if result and not result.error %}
-                // Auto start logs if task is running
                 autoStartLogs('{{ result.task_id }}');
             {% endif %}
         };
@@ -1217,7 +1248,7 @@ def main():
     show_logo()
     
     print("\n" + "="*60)
-    print("🔥 INSTA TOOLS BY LORD DEVIL - VERSION 2.0")
+    print("🔥 INSTA TOOLS BY LORD DEVIL - VERSION 3.0 (COMPLETE REMOVE ON STOP)")
     print("="*60)
     print("\n📋 Available Features:")
     print("  1. 📨 Messenger Tool - Send messages to DM/Group")
@@ -1229,6 +1260,10 @@ def main():
     print("  • Upload names/messages in .txt file")
     print("  • Save Task ID to stop or check status later")
     print("  • Tasks run continuously until stopped manually")
+    print("\n🔧 NEW FEATURE:")
+    print("  • Stop karte hi task COMPLETELY REMOVE ho jayega")
+    print("  • Task ID dobara use nahi kar sakte")
+    print("  • Logs bhi remove ho jayenge")
     print("\n" + "="*60)
     
     print("\n[green]🚀 Starting server on http://0.0.0.0:5000[/green]")
