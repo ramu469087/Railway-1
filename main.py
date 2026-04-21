@@ -33,7 +33,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Global storage
 active_tasks = {}
 task_logs = {}
+task_status = {}
+task_start_time = {}
 active_sessions = {}
+task_threads = {}
 
 # ----------- LOGO -----------
 def show_logo():
@@ -41,8 +44,8 @@ def show_logo():
     ascii_banner = pyfiglet.figlet_format("LORD DEVIL", font="slant")
     console.print(f"[bold red]{ascii_banner}[/bold red]")
     console.print("[bold cyan]🔥 INSTA TOOLS BY LORD DEVIL 🔥[/bold cyan]")
-    console.print("[yellow]⚡ Messenger & Group Name Changer - 100% Working[/yellow]")
-    console.print("[green]🔐 Login Methods: Cookies & Username/Password[/green]\n")
+    console.print("[yellow]⚡ Messenger Tool - 100% Working[/yellow]")
+    console.print("[green]🔐 Login Method: Cookies Only[/green]\n")
 
 # ----------- INSTAGRAPI LOGIN -----------
 def instagram_login_with_cookies(cookies_str):
@@ -99,18 +102,6 @@ def instagram_login_with_cookies(cookies_str):
             
     except Exception as e:
         console.print(f"[red]❌ Login error: {e}[/red]")
-        return None
-
-def instagram_login_with_password(username, password):
-    """Login to Instagram using username and password"""
-    cl = Client()
-    try:
-        cl.login(username, password)
-        user_info = cl.account_info()
-        console.print(f"[green]✅ Login successful! Username: {user_info.username}[/green]")
-        return cl
-    except Exception as e:
-        console.print(f"[red]❌ Password login failed: {e}[/red]")
         return None
 
 # ----------- FAST API LOGIN -----------
@@ -179,7 +170,7 @@ def get_random_headers():
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     }
 
-def fast_instagram_login(cookies_str=None, username=None, password=None):
+def fast_instagram_login(cookies_str=None):
     """Fast login using requests"""
     session = requests.Session()
     
@@ -201,7 +192,6 @@ def fast_instagram_login(cookies_str=None, username=None, password=None):
             console.print("[red]❌ Fast cookies login failed[/red]")
             return None
     
-    # Password login not supported in fast mode
     return None
 
 # ----------- MESSENGER FUNCTIONS -----------
@@ -212,12 +202,23 @@ def send_inbox_message(cl, target_username, hater_name, messages, delay, task_id
         index = 0
         total = len(messages)
         
-        while task_id in active_tasks and active_tasks[task_id]:
+        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+            # Check if task should stop
+            if not active_tasks[task_id].get('active', False):
+                add_log(task_id, "🛑 Task stopped by user", 'info')
+                break
+                
             try:
-                full_msg = f"{hater_name} {messages[index]}"
+                full_msg = f"{hater_name} {messages[index]}" if hater_name else messages[index]
                 cl.direct_send(full_msg, [user_id])
                 
-                log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Sent to {target_username}: {full_msg[:50]}..."
+                # Update stats
+                if 'sent_count' in active_tasks[task_id]:
+                    active_tasks[task_id]['sent_count'] += 1
+                else:
+                    active_tasks[task_id]['sent_count'] = 1
+                
+                log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Sent to {target_username}: {full_msg[:50]}... (Total: {active_tasks[task_id]['sent_count']})"
                 add_log(task_id, log_msg, 'success')
                 
                 index = (index + 1) % total
@@ -231,6 +232,9 @@ def send_inbox_message(cl, target_username, hater_name, messages, delay, task_id
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal error: {str(e)}"
         add_log(task_id, err_msg, 'error')
+    finally:
+        if task_id in active_tasks:
+            active_tasks[task_id]['active'] = False
 
 def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
     """Send messages to group"""
@@ -238,12 +242,23 @@ def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
         index = 0
         total = len(messages)
         
-        while task_id in active_tasks and active_tasks[task_id]:
+        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+            # Check if task should stop
+            if not active_tasks[task_id].get('active', False):
+                add_log(task_id, "🛑 Task stopped by user", 'info')
+                break
+                
             try:
-                full_msg = f"{hater_name} {messages[index]}"
+                full_msg = f"{hater_name} {messages[index]}" if hater_name else messages[index]
                 cl.direct_send(full_msg, thread_ids=[thread_id])
                 
-                log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Sent to group {thread_id}: {full_msg[:50]}..."
+                # Update stats
+                if 'sent_count' in active_tasks[task_id]:
+                    active_tasks[task_id]['sent_count'] += 1
+                else:
+                    active_tasks[task_id]['sent_count'] = 1
+                
+                log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Sent to group: {full_msg[:50]}... (Total: {active_tasks[task_id]['sent_count']})"
                 add_log(task_id, log_msg, 'success')
                 
                 index = (index + 1) % total
@@ -257,34 +272,9 @@ def send_group_message(cl, thread_id, hater_name, messages, delay, task_id):
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal error: {str(e)}"
         add_log(task_id, err_msg, 'error')
-
-# ----------- NAME CHANGER FUNCTIONS -----------
-def change_group_name_instagrapi(cl, thread_id, names, delay, task_id):
-    """Change group name using instagrapi"""
-    try:
-        index = 0
-        total = len(names)
-        
-        while task_id in active_tasks and active_tasks[task_id]:
-            try:
-                new_name = names[index].strip()
-                if new_name:
-                    cl.direct_answer(thread_id, new_name)
-                    
-                    log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] 🔄 Changed to: {new_name}"
-                    add_log(task_id, log_msg, 'namechanger')
-                    
-                    index = (index + 1) % total
-                    time.sleep(delay)
-                    
-            except Exception as e:
-                err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {str(e)[:100]}"
-                add_log(task_id, err_msg, 'error')
-                time.sleep(5)
-                
-    except Exception as e:
-        err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal error: {str(e)}"
-        add_log(task_id, err_msg, 'error')
+    finally:
+        if task_id in active_tasks:
+            active_tasks[task_id]['active'] = False
 
 def change_group_name_fast(session, thread_id, names, delay, task_id):
     """Ultra fast group name changer"""
@@ -292,7 +282,12 @@ def change_group_name_fast(session, thread_id, names, delay, task_id):
         index = 0
         total = len(names)
         
-        while task_id in active_tasks and active_tasks[task_id]:
+        while task_id in active_tasks and active_tasks[task_id].get('active', False):
+            # Check if task should stop
+            if not active_tasks[task_id].get('active', False):
+                add_log(task_id, "🛑 Task stopped by user", 'info')
+                break
+                
             try:
                 new_name = names[index].strip()
                 if new_name:
@@ -301,8 +296,14 @@ def change_group_name_fast(session, thread_id, names, delay, task_id):
                     
                     response = session.post(url, data=data, headers=get_random_headers(), timeout=10)
                     
+                    # Update stats
+                    if 'changed_count' in active_tasks[task_id]:
+                        active_tasks[task_id]['changed_count'] += 1
+                    else:
+                        active_tasks[task_id]['changed_count'] = 1
+                    
                     if response.status_code == 200:
-                        log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ⚡ FAST Changed to: {new_name}"
+                        log_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ⚡ FAST Changed to: {new_name} (Total: {active_tasks[task_id]['changed_count']})"
                         add_log(task_id, log_msg, 'fast')
                     else:
                         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fast error: HTTP {response.status_code}"
@@ -319,6 +320,9 @@ def change_group_name_fast(session, thread_id, names, delay, task_id):
     except Exception as e:
         err_msg = f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Fatal fast error: {str(e)}"
         add_log(task_id, err_msg, 'error')
+    finally:
+        if task_id in active_tasks:
+            active_tasks[task_id]['active'] = False
 
 # ----------- COMMON FUNCTIONS -----------
 def add_log(task_id, message, log_type='info'):
@@ -326,8 +330,8 @@ def add_log(task_id, message, log_type='info'):
     if task_id not in task_logs:
         task_logs[task_id] = []
     
-    # Keep last 50 logs
-    if len(task_logs[task_id]) >= 50:
+    # Keep last 100 logs
+    if len(task_logs[task_id]) >= 100:
         task_logs[task_id].pop(0)
     
     task_logs[task_id].append({
@@ -352,6 +356,16 @@ def read_messages_from_file(file):
         console.print(f"[red]❌ File read error: {e}[/red]")
         return []
 
+def get_uptime(task_id):
+    """Get task uptime"""
+    if task_id in task_start_time:
+        elapsed = datetime.now() - task_start_time[task_id]
+        hours = elapsed.seconds // 3600
+        minutes = (elapsed.seconds % 3600) // 60
+        seconds = elapsed.seconds % 60
+        return f"{hours}h {minutes}m {seconds}s"
+    return "N/A"
+
 # ----------- FLASK ROUTES -----------
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -359,50 +373,34 @@ def home():
         # Get form data
         tool_type = request.form.get('tool_type', 'messenger')
         engine = request.form.get('engine', 'instagrapi')
-        login_method = request.form.get('login_method', 'cookies')
         
         # Generate task ID
         task_id = str(uuid.uuid4())[:8]
-        active_tasks[task_id] = True
-        task_logs[task_id] = []
         
         try:
             # Handle login based on engine
             if engine == 'instagrapi':
-                cl = None
-                if login_method == 'cookies':
-                    cookies = request.form.get('cookies', '').strip()
-                    if not cookies:
-                        return render_template_string(HTML_TEMPLATE, result={
-                            'error': 'Please provide Instagram cookies'
-                        })
-                    cl = instagram_login_with_cookies(cookies)
-                else:
-                    username = request.form.get('username', '').strip()
-                    password = request.form.get('password', '').strip()
-                    if not username or not password:
-                        return render_template_string(HTML_TEMPLATE, result={
-                            'error': 'Please provide username and password'
-                        })
-                    cl = instagram_login_with_password(username, password)
+                cookies = request.form.get('cookies', '').strip()
+                if not cookies:
+                    return render_template_string(HTML_TEMPLATE, result={
+                        'error': 'Please provide Instagram cookies'
+                    })
+                cl = instagram_login_with_cookies(cookies)
                 
                 if not cl:
                     return render_template_string(HTML_TEMPLATE, result={
-                        'error': 'Instagram login failed. Check credentials.'
+                        'error': 'Instagram login failed. Check cookies.'
                     })
                 
                 # Process based on tool type
                 if tool_type == 'messenger':
                     return process_messenger_instagrapi(cl, request, task_id)
                 else:
-                    return process_namechanger_instagrapi(cl, request, task_id)
+                    return render_template_string(HTML_TEMPLATE, result={
+                        'error': 'Name changer removed. Use Ultra Speed mode.'
+                    })
                     
             else:  # Fast engine
-                if login_method != 'cookies':
-                    return render_template_string(HTML_TEMPLATE, result={
-                        'error': 'Fast engine only supports cookies login'
-                    })
-                
                 cookies = request.form.get('cookies', '').strip()
                 if not cookies:
                     return render_template_string(HTML_TEMPLATE, result={
@@ -447,6 +445,11 @@ def process_messenger_instagrapi(cl, request, task_id):
                 'error': 'No messages provided'
             })
         
+        # Initialize task
+        active_tasks[task_id] = {'active': True, 'sent_count': 0}
+        task_logs[task_id] = []
+        task_start_time[task_id] = datetime.now()
+        
         if message_type == 'inbox':
             target_username = request.form.get('target_username', '').strip()
             if not target_username:
@@ -455,6 +458,8 @@ def process_messenger_instagrapi(cl, request, task_id):
                 })
             
             add_log(task_id, f"Starting messenger to {target_username}", 'info')
+            add_log(task_id, f"Total messages loaded: {len(messages)}", 'info')
+            add_log(task_id, f"Delay: {delay} seconds", 'info')
             
             thread = threading.Thread(
                 target=send_inbox_message,
@@ -462,6 +467,7 @@ def process_messenger_instagrapi(cl, request, task_id):
                 daemon=True
             )
             thread.start()
+            task_threads[task_id] = thread
             
             result = {
                 'success': f'✅ Messenger started for @{target_username}',
@@ -481,6 +487,8 @@ def process_messenger_instagrapi(cl, request, task_id):
                 })
             
             add_log(task_id, f"Starting group messenger for thread {thread_id}", 'info')
+            add_log(task_id, f"Total messages loaded: {len(messages)}", 'info')
+            add_log(task_id, f"Delay: {delay} seconds", 'info')
             
             thread = threading.Thread(
                 target=send_group_message,
@@ -488,6 +496,7 @@ def process_messenger_instagrapi(cl, request, task_id):
                 daemon=True
             )
             thread.start()
+            task_threads[task_id] = thread
             
             result = {
                 'success': f'✅ Group messenger started for thread {thread_id}',
@@ -505,55 +514,6 @@ def process_messenger_instagrapi(cl, request, task_id):
         console.print(f"[red]❌ Messenger error: {e}[/red]")
         return render_template_string(HTML_TEMPLATE, result={
             'error': f'Messenger error: {str(e)}'
-        })
-
-def process_namechanger_instagrapi(cl, request, task_id):
-    """Process name changer with instagrapi"""
-    try:
-        thread_id = request.form.get('thread_id', '').strip()
-        delay = int(request.form.get('delay', 30))
-        
-        # Get names
-        names = []
-        if 'names_file' in request.files:
-            file = request.files['names_file']
-            if file.filename != '':
-                names = read_messages_from_file(file)
-        
-        if not names:
-            return render_template_string(HTML_TEMPLATE, result={
-                'error': 'No names provided in file'
-            })
-        
-        if not thread_id:
-            return render_template_string(HTML_TEMPLATE, result={
-                'error': 'Thread ID required'
-            })
-        
-        add_log(task_id, f"Starting name changer for thread {thread_id}", 'info')
-        
-        thread = threading.Thread(
-            target=change_group_name_instagrapi,
-            args=(cl, thread_id, names, delay, task_id),
-            daemon=True
-        )
-        thread.start()
-        
-        result = {
-            'success': f'✅ Name changer started for thread {thread_id}',
-            'tool_type': 'namechanger',
-            'data': names[:10],
-            'delay': delay,
-            'task_id': task_id,
-            'thread_id': thread_id
-        }
-        
-        return render_template_string(HTML_TEMPLATE, result=result)
-        
-    except Exception as e:
-        console.print(f"[red]❌ Name changer error: {e}[/red]")
-        return render_template_string(HTML_TEMPLATE, result={
-            'error': f'Name changer error: {str(e)}'
         })
 
 def process_namechanger_fast(session, request, task_id):
@@ -579,7 +539,14 @@ def process_namechanger_fast(session, request, task_id):
                 'error': 'Thread ID required'
             })
         
+        # Initialize task
+        active_tasks[task_id] = {'active': True, 'changed_count': 0}
+        task_logs[task_id] = []
+        task_start_time[task_id] = datetime.now()
+        
         add_log(task_id, f"Starting FAST name changer for thread {thread_id}", 'info')
+        add_log(task_id, f"Total names loaded: {len(names)}", 'info')
+        add_log(task_id, f"Delay: {delay} seconds", 'info')
         
         thread = threading.Thread(
             target=change_group_name_fast,
@@ -587,6 +554,7 @@ def process_namechanger_fast(session, request, task_id):
             daemon=True
         )
         thread.start()
+        task_threads[task_id] = thread
         
         result = {
             'success': f'⚡ ULTRA SPEED name changer started for thread {thread_id}',
@@ -612,9 +580,27 @@ def stop_task():
     task_id = data.get('task_id')
     
     if task_id in active_tasks:
-        active_tasks[task_id] = False
+        # Set active flag to False to stop the loop
+        active_tasks[task_id]['active'] = False
+        
+        # Wait for thread to finish (max 2 seconds)
+        if task_id in task_threads:
+            task_threads[task_id].join(timeout=2)
+        
         add_log(task_id, "🛑 Task stopped by user", 'info')
-        return jsonify({'success': True})
+        
+        # Clean up after 5 seconds
+        def cleanup():
+            time.sleep(5)
+            if task_id in active_tasks:
+                del active_tasks[task_id]
+            if task_id in task_threads:
+                del task_threads[task_id]
+        
+        cleanup_thread = threading.Thread(target=cleanup, daemon=True)
+        cleanup_thread.start()
+        
+        return jsonify({'success': True, 'message': 'Task stopped successfully'})
     else:
         return jsonify({'error': 'Task ID not found'})
 
@@ -626,10 +612,25 @@ def get_logs():
     else:
         return jsonify({'logs': []})
 
+@app.route('/task_status')
+def task_status_route():
+    task_id = request.args.get('task_id')
+    if task_id in active_tasks:
+        status = active_tasks[task_id]
+        status['running'] = status.get('active', False)
+        status['uptime'] = get_uptime(task_id)
+        if 'sent_count' in status:
+            status['total_sent'] = status['sent_count']
+        if 'changed_count' in status:
+            status['total_changed'] = status['changed_count']
+        return jsonify(status)
+    else:
+        return jsonify({'running': False, 'message': 'Task not found or stopped'})
+
 @app.route('/status')
 def status():
     return jsonify({
-        'active_tasks': len(active_tasks),
+        'active_tasks': len([t for t in active_tasks if active_tasks[t].get('active', False)]),
         'version': '2.0',
         'author': 'LORD DEVIL'
     })
@@ -695,7 +696,6 @@ HTML_TEMPLATE = """
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
         .messenger-btn { background: linear-gradient(45deg, #2196F3, #03A9F4); }
-        .namechanger-btn { background: linear-gradient(45deg, #FF4081, #9C27B0); }
         .fast-btn { background: linear-gradient(45deg, #00FF00, #00CC00); }
         .card {
             background: rgba(255, 255, 255, 0.05);
@@ -793,7 +793,7 @@ HTML_TEMPLATE = """
         }
         .log-success { background: rgba(76, 175, 80, 0.2); border-left: 3px solid #4CAF50; }
         .log-error { background: rgba(244, 67, 54, 0.2); border-left: 3px solid #f44336; }
-        .log-namechanger { background: rgba(255, 64, 129, 0.2); border-left: 3px solid #FF4081; }
+        .log-info { background: rgba(33, 150, 243, 0.2); border-left: 3px solid #2196F3; }
         .log-fast { background: rgba(0, 255, 0, 0.2); border-left: 3px solid #00FF00; }
         .tab-buttons {
             display: flex;
@@ -811,19 +811,34 @@ HTML_TEMPLATE = """
         .tab-btn.active {
             background: linear-gradient(45deg, #ff0000, #ff9900);
         }
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.1);
+        .status-card {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
             border-radius: 10px;
-            margin: 20px 0;
-            overflow: hidden;
+            margin-top: 15px;
         }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff0000, #ff9900);
-            width: 0%;
-            transition: width 0.3s;
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .status-label {
+            font-weight: bold;
+            color: #aaa;
+        }
+        .status-value {
+            color: #00FF00;
+            font-weight: bold;
+        }
+        .task-running {
+            color: #00FF00;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
         @media (max-width: 768px) {
             .mode-btn { min-width: 100%; }
@@ -836,18 +851,18 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="header">
             <div class="owner-name">LORD DEVIL</div>
-            <div class="subtitle">INSTA TOOLS - Messenger & Group Name Changer</div>
+            <div class="subtitle">INSTA TOOLS - Messenger & Ultra Speed Name Changer</div>
         </div>
         
         <div class="mode-selector">
             <button class="mode-btn messenger-btn active" onclick="switchMode('messenger')">📨 Messenger Tool</button>
-            <button class="mode-btn namechanger-btn" onclick="switchMode('namechanger')">🔄 Name Changer</button>
-            <button class="mode-btn fast-btn" onclick="switchMode('fast')">⚡ Ultra Speed</button>
+            <button class="mode-btn fast-btn" onclick="switchMode('fast')">⚡ Ultra Speed Name Changer</button>
         </div>
         
         <div class="tab-buttons">
             <button class="tab-btn active" onclick="switchTab('start')">Start Task</button>
             <button class="tab-btn" onclick="switchTab('stop')">Stop Task</button>
+            <button class="tab-btn" onclick="switchTab('status')">Task Status</button>
             <button class="tab-btn" onclick="switchTab('logs')">Live Logs</button>
         </div>
         
@@ -860,35 +875,9 @@ HTML_TEMPLATE = """
                     <input type="hidden" name="engine" value="instagrapi">
                     
                     <div class="form-group">
-                        <label>Login Method:</label>
-                        <div class="radio-group">
-                            <div class="radio-option">
-                                <input type="radio" id="login_cookies" name="login_method" value="cookies" checked onchange="toggleLoginMethod('messenger')">
-                                <label for="login_cookies">Cookies Login</label>
-                            </div>
-                            <div class="radio-option">
-                                <input type="radio" id="login_password" name="login_method" value="password" onchange="toggleLoginMethod('messenger')">
-                                <label for="login_password">Username/Password</label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="messenger_cookies">
-                        <div class="form-group">
-                            <label for="cookies">Instagram Cookies:</label>
-                            <textarea id="cookies" name="cookies" rows="3" placeholder="sessionid=xxx; ds_user_id=xxx; csrftoken=xxx"></textarea>
-                        </div>
-                    </div>
-                    
-                    <div id="messenger_password" style="display: none;">
-                        <div class="form-group">
-                            <label for="username">Username:</label>
-                            <input type="text" id="username" name="username" placeholder="Your Instagram username">
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password:</label>
-                            <input type="password" id="password" name="password" placeholder="Your Instagram password">
-                        </div>
+                        <label for="cookies">Instagram Cookies:</label>
+                        <textarea id="cookies" name="cookies" rows="3" placeholder="sessionid=xxx; ds_user_id=xxx; csrftoken=xxx" required></textarea>
+                        <small>Only cookies login supported</small>
                     </div>
                     
                     <div class="form-group">
@@ -931,68 +920,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
         
-        <!-- Name Changer Form -->
-        <div id="namechanger-form" class="form-section">
-            <div class="card">
-                <h2>🔄 Group Name Changer</h2>
-                <form method="POST" enctype="multipart/form-data" id="namechangerForm">
-                    <input type="hidden" name="tool_type" value="namechanger">
-                    <input type="hidden" name="engine" value="instagrapi">
-                    
-                    <div class="form-group">
-                        <label>Login Method:</label>
-                        <div class="radio-group">
-                            <div class="radio-option">
-                                <input type="radio" id="nc_login_cookies" name="login_method" value="cookies" checked onchange="toggleLoginMethod('namechanger')">
-                                <label for="nc_login_cookies">Cookies Login</label>
-                            </div>
-                            <div class="radio-option">
-                                <input type="radio" id="nc_login_password" name="login_method" value="password" onchange="toggleLoginMethod('namechanger')">
-                                <label for="nc_login_password">Username/Password</label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="namechanger_cookies">
-                        <div class="form-group">
-                            <label for="nc_cookies">Instagram Cookies:</label>
-                            <textarea id="nc_cookies" name="cookies" rows="3" placeholder="sessionid=xxx; ds_user_id=xxx; csrftoken=xxx"></textarea>
-                        </div>
-                    </div>
-                    
-                    <div id="namechanger_password" style="display: none;">
-                        <div class="form-group">
-                            <label for="nc_username">Username:</label>
-                            <input type="text" id="nc_username" name="username" placeholder="Your Instagram username">
-                        </div>
-                        <div class="form-group">
-                            <label for="nc_password">Password:</label>
-                            <input type="password" id="nc_password" name="password" placeholder="Your Instagram password">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="thread_id_nc">Group Thread ID:</label>
-                        <input type="text" id="thread_id_nc" name="thread_id" placeholder="Enter group thread ID">
-                        <small>Get from Instagram group URL</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="names_file">Names File:</label>
-                        <input type="file" id="names_file" name="names_file" class="file-input" required>
-                        <small>Upload .txt file with names (one per line)</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="delay_nc">Delay (seconds):</label>
-                        <input type="number" id="delay_nc" name="delay" value="30" min="5">
-                    </div>
-                    
-                    <button type="submit" class="btn">Start Name Changer</button>
-                </form>
-            </div>
-        </div>
-        
         <!-- Fast Mode Form -->
         <div id="fast-form" class="form-section">
             <div class="card">
@@ -1000,7 +927,6 @@ HTML_TEMPLATE = """
                 <form method="POST" enctype="multipart/form-data" id="fastForm">
                     <input type="hidden" name="tool_type" value="namechanger">
                     <input type="hidden" name="engine" value="fast">
-                    <input type="hidden" name="login_method" value="cookies">
                     
                     <div class="form-group">
                         <label for="fast_cookies">Instagram Cookies:</label>
@@ -1015,6 +941,7 @@ HTML_TEMPLATE = """
                     <div class="form-group">
                         <label for="fast_names_file">Names File:</label>
                         <input type="file" id="fast_names_file" name="names_file" class="file-input" required>
+                        <small>Upload .txt file with names (one per line)</small>
                     </div>
                     
                     <div class="form-group">
@@ -1040,12 +967,49 @@ HTML_TEMPLATE = """
             </div>
         </div>
         
+        <!-- Status Tab -->
+        <div id="status-tab" class="form-section">
+            <div class="card">
+                <h2>Task Status & Info</h2>
+                <div class="form-group">
+                    <label for="status_task_id">Enter Task ID:</label>
+                    <input type="text" id="status_task_id" placeholder="Enter task ID to check status">
+                    <button class="btn" onclick="checkTaskStatus()" style="margin-top: 10px; background: linear-gradient(45deg, #4CAF50, #45a049);">Check Status</button>
+                </div>
+                <div id="status_display" style="display: none;">
+                    <div class="status-card">
+                        <div class="status-item">
+                            <span class="status-label">Task ID:</span>
+                            <span class="status-value" id="status_id"></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Status:</span>
+                            <span class="status-value" id="status_running"></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Uptime:</span>
+                            <span class="status-value" id="status_uptime"></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Total Sent/Changed:</span>
+                            <span class="status-value" id="status_count"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Logs Tab -->
         <div id="logs-tab" class="form-section">
             <div class="card">
                 <h2>Live Logs</h2>
+                <div class="form-group">
+                    <label for="log_task_id">Enter Task ID:</label>
+                    <input type="text" id="log_task_id" placeholder="Enter task ID to view logs">
+                    <button class="btn" onclick="startLogs()" style="margin-top: 10px;">Start Monitoring</button>
+                </div>
                 <div class="logs-container" id="logsContainer">
-                    <div class="log-entry">No logs yet. Start a task to see logs.</div>
+                    <div class="log-entry">Enter Task ID and click Start Monitoring</div>
                 </div>
             </div>
         </div>
@@ -1063,19 +1027,16 @@ HTML_TEMPLATE = """
                 <p>Task ID: <strong>{{ result.task_id }}</strong></p>
                 <p>Delay: {{ result.delay }} seconds</p>
                 
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                
                 <div class="logs-container">
+                    <h3>Loaded Data:</h3>
                     {% for item in result.data %}
-                        <div class="log-entry {% if result.fast_mode %}log-fast{% else %}log-namechanger{% endif %}">
+                        <div class="log-entry {% if result.fast_mode %}log-fast{% else %}log-success{% endif %}">
                             {{ item }}
                         </div>
                     {% endfor %}
                 </div>
                 
-                <button class="btn" onclick="startLogs('{{ result.task_id }}')" style="margin-top: 20px;">
+                <button class="btn" onclick="autoStartLogs('{{ result.task_id }}')" style="margin-top: 20px;">
                     Show Live Logs
                 </button>
             {% endif %}
@@ -1122,20 +1083,12 @@ HTML_TEMPLATE = """
                 const activeMode = document.querySelector('.mode-btn.active').classList[1];
                 if (activeMode.includes('messenger')) {
                     document.getElementById('messenger-form').classList.add('active');
-                } else if (activeMode.includes('namechanger')) {
-                    document.getElementById('namechanger-form').classList.add('active');
                 } else {
                     document.getElementById('fast-form').classList.add('active');
                 }
             } else {
                 document.getElementById(tab + '-tab').classList.add('active');
             }
-        }
-        
-        function toggleLoginMethod(formType) {
-            const isCookies = document.getElementById(formType + '_login_cookies').checked;
-            document.getElementById(formType + '_cookies').style.display = isCookies ? 'block' : 'none';
-            document.getElementById(formType + '_password').style.display = isCookies ? 'none' : 'block';
         }
         
         function toggleMessageType() {
@@ -1167,11 +1120,59 @@ HTML_TEMPLATE = """
             });
         }
         
-        function startLogs(taskId) {
+        function checkTaskStatus() {
+            const taskId = document.getElementById('status_task_id').value;
+            if (!taskId) {
+                alert('Please enter Task ID');
+                return;
+            }
+            
+            fetch('/task_status?task_id=' + taskId)
+                .then(res => res.json())
+                .then(data => {
+                    const display = document.getElementById('status_display');
+                    if (data.running) {
+                        document.getElementById('status_id').textContent = taskId;
+                        document.getElementById('status_running').innerHTML = '<span class="task-running">● RUNNING</span>';
+                        document.getElementById('status_uptime').textContent = data.uptime;
+                        if (data.total_sent) {
+                            document.getElementById('status_count').textContent = data.total_sent + ' messages sent';
+                        } else if (data.total_changed) {
+                            document.getElementById('status_count').textContent = data.total_changed + ' names changed';
+                        } else {
+                            document.getElementById('status_count').textContent = '0';
+                        }
+                        display.style.display = 'block';
+                    } else {
+                        display.style.display = 'block';
+                        document.getElementById('status_id').textContent = taskId;
+                        document.getElementById('status_running').innerHTML = '● STOPPED';
+                        document.getElementById('status_running').style.color = '#f44336';
+                        document.getElementById('status_uptime').textContent = 'N/A';
+                        document.getElementById('status_count').textContent = '0';
+                    }
+                })
+                .catch(err => {
+                    alert('Error fetching status');
+                });
+        }
+        
+        function startLogs() {
+            const taskId = document.getElementById('log_task_id').value;
+            if (!taskId) {
+                alert('Please enter Task ID');
+                return;
+            }
+            
             currentTaskId = taskId;
             if (logsInterval) clearInterval(logsInterval);
             fetchLogs();
             logsInterval = setInterval(fetchLogs, 2000);
+        }
+        
+        function autoStartLogs(taskId) {
+            document.getElementById('log_task_id').value = taskId;
+            startLogs();
             switchTab('logs');
         }
         
@@ -1193,27 +1194,18 @@ HTML_TEMPLATE = """
                         });
                         container.scrollTop = container.scrollHeight;
                     } else {
-                        container.innerHTML = '<div class="log-entry">No logs yet...</div>';
+                        container.innerHTML = '<div class="log-entry">No logs yet. Task may not be running.</div>';
                     }
                 });
         }
         
         // Initialize
         window.onload = function() {
-            toggleLoginMethod('messenger');
             toggleMessageType();
             
             {% if result and not result.error %}
                 // Auto start logs if task is running
-                startLogs('{{ result.task_id }}');
-                
-                // Progress animation
-                let progress = 0;
-                const progressBar = document.getElementById('progressFill');
-                setInterval(() => {
-                    progress = (progress + 1) % 100;
-                    progressBar.style.width = progress + '%';
-                }, 100);
+                autoStartLogs('{{ result.task_id }}');
             {% endif %}
         };
     </script>
@@ -1229,14 +1221,14 @@ def main():
     print("="*60)
     print("\n📋 Available Features:")
     print("  1. 📨 Messenger Tool - Send messages to DM/Group")
-    print("  2. 🔄 Group Name Changer - Change group names")
-    print("  3. ⚡ Ultra Speed Mode - Fast group name changer")
-    print("  4. 🔐 Login Methods: Cookies & Username/Password")
+    print("  2. ⚡ Ultra Speed Mode - Fast group name changer")
+    print("  3. 🔐 Login Method: Cookies Only")
     print("\n⚙️  How to use:")
     print("  • Open browser: http://localhost:5000")
     print("  • Get cookies from browser DevTools")
     print("  • Upload names/messages in .txt file")
-    print("  • Save Task ID to stop later")
+    print("  • Save Task ID to stop or check status later")
+    print("  • Tasks run continuously until stopped manually")
     print("\n" + "="*60)
     
     print("\n[green]🚀 Starting server on http://0.0.0.0:5000[/green]")
